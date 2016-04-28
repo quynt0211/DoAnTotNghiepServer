@@ -1,0 +1,9 @@
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+	RewriteBase /api/
+	RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteCond %{REQUEST_FILENAME} !-s
+    RewriteRule ^api/([^/\.]+)$ api.php?rquest=$1 [QSA,NC,L]
+	RewriteRule ^api/([^/\.]+)/(.*)$ api.php?rquest=$1&params=$2 [QSA,NC,L]
+	RewriteBase /
+</IfModule>
