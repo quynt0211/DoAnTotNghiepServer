@@ -65,12 +65,10 @@ class API extends REST {
 	
 	private function createOwner()
 	{
-		// check method when client sent to server
         if($this->get_request_method() != "POST"){
             $this->response($this->json(array('success' => false, 'errror-code' => 5)), 406);
         }
-
-		// create owner
+		
 		$data = array(
 			'Name' 			=> $_POST['name'],
 			'PhoneNumber' 	=> $_POST['phone'],
@@ -81,30 +79,41 @@ class API extends REST {
 		$tempphone = $_POST['phone'];
 		
 		$result = DBHelper::runQuery("select * from chuhang where PhoneNumber = ".$tempphone);
+		
 		if($result->num_rows == 0 ){
-			if ($id = DBHelper::Insert('chuhang', $data)){
-				// du lieu tra ve:
+			$result = DBHelper::runQuery("select * from dailyvanchuyen where phonenumber = ".$tempphone);
+			if($result->num_rows == 0 ){
+				if ($id = DBHelper::Insert('chuhang', $data)){
+				
+				$result = array(
+					'idowner' => $id,
+					'name'	=> $data['Name'],
+					'phonenumber' => $data['PhoneNumber'],
+					'address' 	=> $data['Address'],
+					'password'	=> $data['Password']
+				);
 				$returnData = array(
-					'success' => true, 
-					'data' => 'text data',
-					'id'   => $id,
-					'Name' => $data['Name'],
-					'PhoneNumber' => $data['PhoneNumber'],
-					'Address' => $data['Address'],
-					'Password' => $data['Password']
+					'success' => true,  
+					'owner'		=> $result
 				);
 			}else {
-				// du lieu tra ve:
 				$returnData = array(
 					'success' => false, 
-					'error-code' => 2
+					'message' => "Hệ Thống Đang Gặp Sự Cố. Vui Lòng Thử Lại Sau"
 				);
 			}
 			$this->response($this->json($returnData), 200);
+			}else{
+				$returnData = array(
+				'success' => false,
+				'message' => "Đã tồn tại số điện thoại trên hệ thống"
+				);
+			$this->response($this->json($returnData), 200);
+			}
 		}else{
 			$returnData = array(
 				'success' => false,
-				'error-code' => "5"
+				'message' => "Đã tồn tại số điện thoại trên hệ thống"
 				);
 			$this->response($this->json($returnData), 200);
 		}
@@ -170,27 +179,48 @@ class API extends REST {
 			'password'	=> $_POST['password']
 		);
 		
-		$result = DBHelper::runQuery("select * from chuhang where PhoneNumber = ".$data['phone']." and password = ".$data['password']  );
-		if($result->num_rows == 0){
-			$result = DBHelper::runQuery("select * from dailyvanchuyen where phonenumber = ".$data['phone']." and password = ".$data['password']  );
-			if($result->num_rows == 0 ){
-				$returnData = array(
-				'success' => false,
-				'error-code' => "5"
+		$result1 = DBHelper::runQuery("select * from chuhang where PhoneNumber = ".$data['phone']." and Password = '".$data['password']."'");
+		//var_dump("select * from chuhang where PhoneNumber = ".$data['phone']." and Password = ".$data['password']); die;
+		//$result1 = DBHelper::runQuery("select * from chuhang where PhoneNumber = ".$data['phone']);
+		
+		if($result1){
+			if($result1->num_rows == 0){
+			$result = DBHelper::runQuery("select * from dailyvanchuyen where phonenumber = ".$data['phone']." and password = '".$data['password']."'"  );
+				if($result){
+					if($result->num_rows == 0 ){
+						$returnData = array(
+						'success' => false,
+						'message' => "Sai Tài Khoản Hoặc Mật Khẩu"
+					);
+					$this->response($this->json($returnData), 200);
+					}else{
+						$returnData = array(
+						'success' => true,
+						'accountType' => 2,
+						'data'		=> $result->fetch_assoc()
+						);
+						$this->response($this->json($returnData), 200);
+					}
+				}else{
+					$returnData = array(
+					'success' => false,
+					'message' => "Lỗi Hệ Thống"
 				);
 			$this->response($this->json($returnData), 200);
+				}
+				
 			}else{
 				$returnData = array(
-				'success' => true,
-				'error-code' => "5",
-				'data'		=> $result->fetch_assoc()
-				);
-			$this->response($this->json($returnData), 200);
+					'success' => true,
+					'accountType' => 1,
+					'data'		=> $result1->fetch_assoc()
+					);
+				$this->response($this->json($returnData), 200);
 			}
 		}else{
-			$returnData = array(
-				'success' => true,
-				'data'		=> $result->fetch_assoc()
+				$returnData = array(
+				'success' => false,
+				'message' => "Lỗi Hệ Thống"
 				);
 			$this->response($this->json($returnData), 200);
 		}
@@ -298,7 +328,11 @@ class API extends REST {
             $this->response($this->json(array('success' => false, 'errror-code' => 2)), 406);
         }
 		
-		$sql = "select * from goihang";
+		//$sql = "select * from goihang";
+		$sql = "select goihang.*, chuhang.`Name` as ownerName
+				from goihang, chuhang
+				where goihang.idowner = chuhang.idowner
+				and goihang.isDelivery = 0";
 		$result = DBHelper::runQuery($sql);
 		
 		$data = array();
@@ -568,23 +602,42 @@ class API extends REST {
 		$idowner = $_POST['idowner'];
 		$idpackage = $_POST['idpackage'];
 		
-		$sql = "delete from goihang where idowner = ".$idowner." and idpackage = ".$idpackage;
-	//	var_dump($sql); die;
-		$result = DBHelper::runQuery($sql);
+		$selectSql = "select * from goihang where idpackage = ".$idpackage;
+		$resultSelect = DBHelper::runQuery($selectSql);
 		
-		if($result){
-			$returnData = array(
-				'sucess' => true,
-				'code'	 => 1
-			);
+		if($resultSelect){
+			$row = $resultSelect->fetch_assoc();
+			if($row['isDelivery'] == 0 ){
+				$sql = "delete from goihang where idowner = ".$idowner." and idpackage = ".$idpackage;
+				$result = DBHelper::runQuery($sql);
+					
+				if($result){
+					$returnData = array(
+						'sucess' => true,
+						'message'	 => "Hủy Yêu Cầu Thành Công"
+						);
+					}else{
+						$returnData = array(
+							'sucess' => false,
+							'message'	 => "Lỗi Hệ Thống"
+						);
+					}
+			
+				$this->response($this->json($returnData), 200);
+			}else{
+				$returnData = array(
+							'sucess' => false,
+							'message'	 => "Đã Có Người Đi Giao"
+				);
+				$this->response($this->json($returnData), 200);
+			}
 		}else{
 			$returnData = array(
-				'sucess' => false,
-				'code'	 => 0
-			);
+							'sucess' => false,
+							'message'	 => "Lỗi Hệ Thống"
+				);
+			$this->response($this->json($returnData), 200);
 		}
-		
-		$this->response($this->json($returnData), 200);
 	}
 	
 	// danh sach nhan di giao cua shipper
