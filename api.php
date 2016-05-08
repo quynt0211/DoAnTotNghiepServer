@@ -560,34 +560,34 @@ class API extends REST {
 		if( isset($_POST['description']))
 			$data['description'] = $_POST['description'];
 		
-		// check idpackage is deliveryed//
 		$sql = "select isDelivery from goihang where idpackage = ".$idpackage;
+	//	var_dump($sql); die;
 		$result = DBHelper::runQuery($sql);
 		if($result){
 			$row = $result->fetch_assoc();
 			if($row['isDelivery'] == 1 ){
 				$returnData = array(
 					'success' => false,
-					'code'		=> 0
+					'message'		=> "Đã Có Người Đi Giao"
 				);
 			}else{
 				$resu = DBHelper::Update("goihang", $data, "idpackage = ".$idpackage);
 				if($resu){
 					$returnData = array(
 					'success' => true,
-					'code'		=> 1
+					'message'		=> "Sửa Yêu Cầu Thành Công"
 					);
 				}else{
 					$returnData = array(
 					'success' => false,
-					'code'		=> 0
+					'message'		=> "Lỗi Hệ Thống"
 					);
 				}
 			}
 		}else{
 			$returnData = array(
 					'success' => false,
-					'code'		=> 0
+					'message'		=> "Lỗi Hệ Thống"
 			);
 		}
 		
@@ -613,12 +613,12 @@ class API extends REST {
 					
 				if($result){
 					$returnData = array(
-						'sucess' => true,
+						'success' => true,
 						'message'	 => "Hủy Yêu Cầu Thành Công"
 						);
 					}else{
 						$returnData = array(
-							'sucess' => false,
+							'success' => false,
 							'message'	 => "Lỗi Hệ Thống"
 						);
 					}
@@ -626,14 +626,14 @@ class API extends REST {
 				$this->response($this->json($returnData), 200);
 			}else{
 				$returnData = array(
-							'sucess' => false,
+							'success' => false,
 							'message'	 => "Đã Có Người Đi Giao"
 				);
 				$this->response($this->json($returnData), 200);
 			}
 		}else{
 			$returnData = array(
-							'sucess' => false,
+							'success' => false,
 							'message'	 => "Lỗi Hệ Thống"
 				);
 			$this->response($this->json($returnData), 200);
