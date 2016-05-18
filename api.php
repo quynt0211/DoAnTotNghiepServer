@@ -63,6 +63,38 @@ class API extends REST {
         $this->response($this->json($returnData), 200);
     }
 	
+	private function loginAdmin(){
+		if($this->get_request_method() != "POST"){
+            $this->response($this->json(array('success' => false, 'errror-code' => 5)), 406);
+        }
+		
+		$id = $_POST['id'];
+		$password = $_POST['password'];
+		
+		$sql = "select * from admin where id = '".$id."' and password = '".$password."'";
+		$result = DBHelper::runQuery($sql);
+		if($result){
+			if($result->num_rows == 1){
+			$returnData = array(
+            'success' => true, 
+            'data' => $result->fetch_assoc()
+			);
+			}else{
+				$returnData = array(
+					'success' => false, 
+					'message' => "Sai Tài Khoản Hoặc Mật Khẩu"
+				);
+			}
+		}else{
+			$returnData = array(
+            'success' => false, 
+            'message' => 'Lỗi Hệ Thống, Vui Lòng Thử Lại'
+			);
+			
+		}
+		 $this->response($this->json($returnData), 200);
+	}
+	
 	private function updateInfoOwner(){
 		if($this->get_request_method() != "POST"){
             $this->response($this->json(array('success' => false, 'errror-code' => 5)), 406);
@@ -332,9 +364,8 @@ class API extends REST {
 			'password'	=> $_POST['password']
 		);
 		
-		$result1 = DBHelper::runQuery("select * from chuhang where PhoneNumber = ".$data['phone']." and Password = '".$data['password']."'");
-		//var_dump("select * from chuhang where PhoneNumber = ".$data['phone']." and Password = ".$data['password']); die;
-		//$result1 = DBHelper::runQuery("select * from chuhang where PhoneNumber = ".$data['phone']);
+		$sql = "select * from chuhang where PhoneNumber = ".$data['phone']." and Password = '".$data['password']."'";
+		$result1 = DBHelper::runQuery($sql);
 		
 		if($result1){
 			if($result1->num_rows == 0){
@@ -344,14 +375,33 @@ class API extends REST {
 						$returnData = array(
 						'success' => false,
 						'message' => "Sai Tài Khoản Hoặc Mật Khẩu"
-					);
-					$this->response($this->json($returnData), 200);
-					}else{
-						$returnData = array(
-						'success' => true,
-						'accountType' => 2,
-						'data'		=> $result->fetch_assoc()
 						);
+						$this->response($this->json($returnData), 200);
+					}else{
+						
+						$row = $result->fetch_assoc();
+						if($row['accept'] == 2){
+							$returnData = array(
+							'success' => true,
+							'accountType' => 2,
+							'data'		=> $row
+							);
+						}
+						
+						if($row['accept'] == 1 ){
+							$returnData = array(
+							'success' => false,
+							'message'		=> "Tài Khoản Của Bạn Bị Khóa"
+							);
+						}
+						
+						if($row['accept'] == 0 ){
+							$returnData = array(
+							'success' => false,
+							'message'		=> "Vui Lòng Đợi Ban Quản Trị Duyệt Tài Khoản Của Bạn"
+							);
+						}
+						
 						$this->response($this->json($returnData), 200);
 					}
 				}else{
@@ -363,12 +413,31 @@ class API extends REST {
 				}
 				
 			}else{
-				$returnData = array(
-					'success' => true,
-					'accountType' => 1,
-					'data'		=> $result1->fetch_assoc()
-					);
-				$this->response($this->json($returnData), 200);
+				
+				$row = $result1->fetch_assoc();
+					if($row['accept'] == 2){
+						$returnData = array(
+						'success' => true,
+						'accountType' => 1,
+						'data'		=> $row
+						);
+					}
+						
+					if($row['accept'] == 1 ){
+						$returnData = array(
+						'success' => false,
+						'message'		=> "Tài Khoản Của Bạn Bị Khóa"
+						);
+					}
+						
+					if($row['accept'] == 0 ){
+						$returnData = array(
+						'success' => false,
+						'message'		=> "Vui Lòng Đợi Ban Quản Trị Duyệt Tài Khoản Của Bạn"
+						);
+					}
+						
+					$this->response($this->json($returnData), 200);
 			}
 		}else{
 				$returnData = array(
@@ -506,7 +575,8 @@ class API extends REST {
         }
 		
 		$idShipper = $_POST['id'];
-		$sql = "select goihang.*, chuhang.PhoneNumber from goihang, chuhang where goihang.idowner = chuhang.idowner and idshipper = ".$idShipper;
+		$sql = "select goihang.*, chuhang.PhoneNumber, daugia.rate from goihang, chuhang, daugia where goihang.idowner = chuhang.idowner and goihang.idpackage = daugia.idpackage and goihang.idshipper = ".$idShipper;
+		//var_dump($sql);die;
 		$result = DBHelper::runQuery($sql);
 		$data = array();
 		while($row = $result->fetch_assoc()){
@@ -517,6 +587,30 @@ class API extends REST {
 				'success' => true, 
 				'data' => $data
 			);
+		$this->response($this->json($returnData), 200);	
+	}
+	
+	private function getRate(){
+		if($this->get_request_method() != "POST"){
+            $this->response($this->json(array('success' => false, 'errror-code' => 2)), 406);
+        }
+		
+		$idpackage = $_POST['idpackage'];
+		$idshipper = $_POST['idshipper'];
+		$sql = "select * from daugia where idshipper = ".$idshipper." and idpackage = ".$idpackage;
+	//	var_dump($sql);die;
+		$result = DBHelper::runQuery($sql);
+		if($result){
+			$returnData = array(
+				'success' => true, 
+				'data' => $result->fetch_assoc()
+			);
+		}else{
+			$returnData = array(
+				'success' => false, 
+				'message' => "Lỗi Hệ Thống, Vui Lòng Thử Lại"
+			);
+		}
 		$this->response($this->json($returnData), 200);	
 	}
 	
@@ -565,6 +659,29 @@ class API extends REST {
 			);
 		}
 		$this->response($this->json($returnData), 200);	
+	}
+	
+	private function getDetailPackage(){
+		if($this->get_request_method() != "POST"){
+            $this->response($this->json(array('success' => false, 'errror-code' => 2)), 406);
+        }
+		
+		$idpackage = $_POST['idpackage'];
+		$sql = "select * from goihang where idpackage = ".$idpackage;
+		$result = DBHelper::runQuery($sql);
+		if($result){
+			$returnData = array(
+				'success' => true, 
+				'data' => $result->fetch_assoc()
+			);
+		}else{
+			$returnData = array(
+				'success' => false, 
+				'message' => "Lỗi Hệ Thống, Vui Lòng Thử Lại"
+			);
+		}
+		
+		$this->response($this->json($returnData), 200);
 	}
 	
 	private function getDetailShipper(){
@@ -966,6 +1083,60 @@ class API extends REST {
 		$this->response($this->json($returnData), 200);		
 	}
 	
+	private function getInfoOwner(){
+		if($this->get_request_method() != "POST"){
+            $this->response($this->json(array('success' => false, 'errror-code' => 2)), 406);
+        }
+		
+		$idowner = $_POST['idowner'];
+		$sql = "select * from chuhang where idowner = ".$idowner;
+		$result = DBHelper::runQuery($sql);
+		if($result){
+			$returnData = array(
+				'success' =>true,
+				'data'	=> $result->fetch_assoc()
+			);
+		}else{
+			$returnData = array(
+				'success' =>false,
+				'message'	=> "Lỗi Hệ Thống, Vui Lòng Thử Lại"
+			);
+		}
+		
+		$this->response($this->json($returnData), 200);
+	}
+	
+	private function getNotificationShipper(){
+		if($this->get_request_method() != "POST"){
+            $this->response($this->json(array('success' => false, 'errror-code' => 2)), 406);
+        }
+		
+		$idshipper = $_POST['idshipper'];
+		$status = "";
+		
+		$sql = "select * from goihang where status = '' and idshipper = ".$idshipper;
+		$result = DBHelper::runQuery($sql);
+		if($result){
+			if($result->num_rows != 0 ){
+				$returnData = array(
+				'success' =>true,
+				'message'	=> "Bạn Nhận Được ".$result->num_rows." Yêu Cầu Đi Giao Hàng. Chi Tiết Xem Trong Lịch Sử"
+				);
+			}else{
+				$returnData = array(
+				'success' =>false,
+				'message'	=> ""
+				);
+			}
+		}else{
+			$returnData = array(
+				'success' =>false,
+				'message'	=> "Lỗi Hệ Thống, Vui Lòng Thử Lại"
+			);
+		}
+		$this->response($this->json($returnData), 200);	
+	}
+	
 	private function updateAuctionShipper(){
 		if($this->get_request_method() != "POST"){
             $this->response($this->json(array('success' => false, 'errror-code' => 2)), 406);
@@ -1007,6 +1178,7 @@ class API extends REST {
 			'idpackage' => $_POST['idpackage'],
 			'idowner'	=> $_POST['idowner'],
 			'idshipper'	=> $_POST['idshipper'],
+			'auctiondate'=> $_POST['auctiondate'],
 			'rate'		=> -1
 		);
 		
@@ -1045,6 +1217,79 @@ class API extends REST {
 			);
 			$this->response($this->json($returnData), 200);	
 		}
+	}
+	
+	
+	// api for admin
+	private function getOwners(){
+		if($this->get_request_method() != "POST"){
+            $this->response($this->json(array('success' => false, 'errror-code' => 2)), 406);
+        }
+		
+		$accountType = $_POST['type'];
+		$sql = "select * from chuhang where accept = ".$accountType;
+		$result = DBHelper::runQuery($sql);
+		if($result){
+			$data = array();
+			while($row = $result->fetch_assoc()){
+				$data[]= $row;
+			}
+			
+			$returnData = array(
+				'success' =>true,
+				'data'	=> $data
+			);
+		}else{
+			$returnData = array(
+				'success' =>false,
+				'message'	=> "Lỗi Hệ Thống, Vui Lòng Thử Lại"
+			);
+		}
+		$this->response($this->json($returnData), 200);	
+	}
+	
+	private function blockOwner(){
+		if($this->get_request_method() != "POST"){
+            $this->response($this->json(array('success' => false, 'errror-code' => 2)), 406);
+        }
+		
+		$idOwner = $_POST['idowner'];
+		$sql = "update chuhang set accept = 1 where idowner = ".$idOwner;
+		$result = DBHelper::runQuery($sql);
+		if($result){
+			$returnData = array(
+				'success' =>true,
+				'message'	=> "Chặn Người Dùng Thành Công"
+			);
+		}else{
+			$returnData = array(
+				'success' =>false,
+				'message'	=> "Lỗi Hệ Thống, Vui Lòng Thử Lại"
+			);
+		}
+		$this->response($this->json($returnData), 200);	
+	}
+	
+	private function allowRegister(){
+		if($this->get_request_method() != "POST"){
+            $this->response($this->json(array('success' => false, 'errror-code' => 2)), 406);
+        }
+		
+		$idOwner = $_POST['idowner'];
+		$sql = "update chuhang set accept = 2 where idowner = ".$idOwner;
+		$result = DBHelper::runQuery($sql);
+		if($result){
+			$returnData = array(
+				'success' =>true,
+				'message'	=> "Thành Công"
+			);
+		}else{
+			$returnData = array(
+				'success' =>false,
+				'message'	=> "Lỗi Hệ Thống, Vui Lòng Thử Lại"
+			);
+		}
+		$this->response($this->json($returnData), 200);	
 	}
 	
 	/*
