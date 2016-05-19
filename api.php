@@ -257,10 +257,20 @@ class API extends REST {
 						'Address' 	=> $data['Address'],
 						'Password'	=> $data['Password']
 					);
-					$returnData = array(
+					
+			/*		$returnData = array(
 						'success' => true,  
 						'owner'		=> $result
+					);*/
+					
+					$returnData = array(
+						'success' => true,  
+						'message'		=> "Bạn Vui Lòng Đăng Nhập Sau 24h Sau."
 					);
+					
+					
+					
+					
 				}else {
 					$returnData = array(
 						'success' => false, 
@@ -325,9 +335,13 @@ class API extends REST {
 						'isSamples'	=> $data['isSamples']
 						);
 					
-					$returnData = array(
+				/*	$returnData = array(
 						'success' => true,
 						'data'		=> $result
+						);*/
+						$returnData = array(
+						'success' => true,
+						'message'		=> "Vui Lòng Đăng Nhập Sau 24h"
 						);
 					$this->response($this->json($returnData), 200);						
 				}else{
@@ -1277,6 +1291,77 @@ class API extends REST {
 		
 		$idOwner = $_POST['idowner'];
 		$sql = "update chuhang set accept = 2 where idowner = ".$idOwner;
+		$result = DBHelper::runQuery($sql);
+		if($result){
+			$returnData = array(
+				'success' =>true,
+				'message'	=> "Thành Công"
+			);
+		}else{
+			$returnData = array(
+				'success' =>false,
+				'message'	=> "Lỗi Hệ Thống, Vui Lòng Thử Lại"
+			);
+		}
+		$this->response($this->json($returnData), 200);	
+	}
+	
+	private function getShippers(){
+		if($this->get_request_method() != "POST"){
+            $this->response($this->json(array('success' => false, 'errror-code' => 2)), 406);
+        }
+		
+		$accountType = $_POST['type'];
+		$sql = "select * from dailyvanchuyen where accept = ".$accountType;
+		$result = DBHelper::runQuery($sql);
+		if($result){
+			$data = array();
+			while($row = $result->fetch_assoc()){
+				$data[]= $row;
+			}
+			
+			$returnData = array(
+				'success' =>true,
+				'data'	=> $data
+			);
+		}else{
+			$returnData = array(
+				'success' =>false,
+				'message'	=> "Lỗi Hệ Thống, Vui Lòng Thử Lại"
+			);
+		}
+		$this->response($this->json($returnData), 200);	
+	}
+	
+	private function blockShipper(){
+		if($this->get_request_method() != "POST"){
+            $this->response($this->json(array('success' => false, 'errror-code' => 2)), 406);
+        }
+		
+		$idshipper = $_POST['idshipper'];
+		$sql = "update dailyvanchuyen set accept = 1 where idshipper = ".$idshipper;
+		$result = DBHelper::runQuery($sql);
+		if($result){
+			$returnData = array(
+				'success' =>true,
+				'message'	=> "Chặn Người Dùng Thành Công"
+			);
+		}else{
+			$returnData = array(
+				'success' =>false,
+				'message'	=> "Lỗi Hệ Thống, Vui Lòng Thử Lại"
+			);
+		}
+		$this->response($this->json($returnData), 200);	
+	}
+	
+	private function allowShipperRegister(){
+		if($this->get_request_method() != "POST"){
+            $this->response($this->json(array('success' => false, 'errror-code' => 2)), 406);
+        }
+		
+		$idshipper = $_POST['idshipper'];
+		$sql = "update dailyvanchuyen set accept = 2 where idshipper = ".$idshipper;
 		$result = DBHelper::runQuery($sql);
 		if($result){
 			$returnData = array(
